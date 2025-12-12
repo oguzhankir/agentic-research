@@ -46,7 +46,13 @@ class TechnicalAnalystAgent(BaseAgent):
             
             try:
                 state["progress_updates"].append(f"Technical Analyst: Deep diving into {question_text}...")
-                results = self.search_tool.invoke(search_query)
+                
+                # Async search with timeout
+                import asyncio
+                results = await asyncio.wait_for(
+                    asyncio.to_thread(self.search_tool.invoke, search_query),
+                    timeout=15.0
+                )
                 
                 # Use LLM to analyze the technical findings
                 analysis_prompt = f"""

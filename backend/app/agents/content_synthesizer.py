@@ -33,15 +33,38 @@ class ContentSynthesizerAgent(BaseAgent):
         
         # Format findings for LLM
         findings_text = ""
-        for f in all_findings:
-            findings_text += f"\n--- Finding ({f.get('type')}) ---\n"
-            findings_text += f"Question: {f.get('question')}\n"
-            findings_text += f"Content: {f.get('content') or f.get('raw_content')}\n"
-            findings_text += f"Source: {f.get('source')}\n"
+        
+        # Helper to format dict findings
+        def format_finding(f, f_type):
+            text = f"\n--- Finding ({f_type}) ---\n"
+            text += f"Question: {f.get('question', 'N/A')}\n"
+            # Handle both 'content' and 'raw_content' keys
+            content = f.get('content') or f.get('raw_content') or "No content"
+            text += f"Content: {content}\n"
+            text += f"Source: {f.get('source', 'Unknown')}\n"
+            return text
+
+        for f in web_findings:
+            findings_text += format_finding(f, "Web")
+        for f in technical_findings:
+            findings_text += format_finding(f, "Technical")
+        for f in business_findings:
+            findings_text += format_finding(f, "Business")
+
+        # Safe truncation to avoid Context Limit Errors or timeouts
+        MAX_CHARS = 50000 
+        if len(findings_text) > MAX_CHARS:
+            logger.warning(f"Truncating findings from {len(findings_text)} to {MAX_CHARS} chars.")
+            findings_text = findings_text[:MAX_CHARS] + "\n...(truncated due to length)..."
+            
+        logger.info(f"Synthesizer Input Size: {len(findings_text)} chars")
+        state["progress_updates"].append(f"Processing {len(findings_text)} characters of data...")
 
         system_prompt = "You are a Lead Editor. Synthesize the following research findings into a Comprehensive Markdown Report."
         
         try:
+            # Add timeout to call to prevent infinite hang? 
+            # Standard langchain call
             response = await self.llm.ainvoke([
                 SystemMessage(content=system_prompt),
                 HumanMessage(content=f"Write the report based on:\n\n{findings_text}")

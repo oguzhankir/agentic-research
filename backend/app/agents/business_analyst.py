@@ -46,7 +46,13 @@ class BusinessAnalystAgent(BaseAgent):
             
             try:
                 state["progress_updates"].append(f"Business Analyst: Analyzing market data for {question_text}...")
-                results = self.search_tool.invoke(search_query)
+                
+                # Async search with timeout
+                import asyncio
+                results = await asyncio.wait_for(
+                    asyncio.to_thread(self.search_tool.invoke, search_query),
+                    timeout=15.0
+                )
                 
                 # Use LLM to analyze the business findings
                 analysis_prompt = f"""

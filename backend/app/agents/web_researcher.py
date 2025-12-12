@@ -46,8 +46,13 @@ class WebResearcherAgent(BaseAgent):
             state["progress_updates"].append(f"Searching: {question_text}...")
             
             try:
-                # Direct search - proven to be more reliable for this user
-                search_results = self.search_tool.invoke(question_text)
+                # Run synchronous search in a separate thread to prevent blocking
+                # Add a 15-second timeout to prevent global hangs
+                import asyncio
+                search_results = await asyncio.wait_for(
+                    asyncio.to_thread(self.search_tool.invoke, question_text),
+                    timeout=15.0
+                )
                 
                 # Basic parsing or just use the raw snippet
                 findings.append({
