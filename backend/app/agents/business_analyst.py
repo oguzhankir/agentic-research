@@ -45,17 +45,18 @@ class BusinessAnalystAgent(BaseAgent):
             logger.info(f"Business Research: {search_query}")
             
             try:
+                state["progress_updates"].append(f"Business Analyst: Analyzing market data for {question_text}...")
                 results = self.search_tool.invoke(search_query)
                 
                 # Use LLM to analyze the business findings
                 analysis_prompt = f"""
-                You are a Strategic Business Analyst. 
+                You are a Strategic Business Analyst (MBA/McKinsey style).
                 Analyze these search results regarding: "{question_text}"
                 
                 Search Results:
                 {results}
                 
-                Provide a strategic business assessment (2-3 paragraphs). Focus on market size, revenue, competitors, and growth potential.
+                Provide a strategic insight (SWOT, Market Size, CAGR, or Competitive Landscape).
                 """
                 
                 analysis_response = await self.llm.ainvoke([HumanMessage(content=analysis_prompt)])
@@ -67,11 +68,11 @@ class BusinessAnalystAgent(BaseAgent):
                     "content": analyzed_content,
                     "raw_content": results,
                     "source": "Business Analyst Agent",
-                    "type": "business_analysis",
-                    "url": "https://bloomberg.com" # Fallback/Placeholder for UI
+                    "type": "market_analysis",
+                    "url": "https://bloomberg.com" # Placeholder
                 })
                 
-                state["progress_updates"].append(f"Analyzed business aspect: {question_text}")
+                state["progress_updates"].append(f"Business Insight generated: {question_text}")
                 
             except Exception as e:
                 logger.error(f"Error in Business Analyst for {question_text}: {e}")
@@ -79,5 +80,6 @@ class BusinessAnalystAgent(BaseAgent):
 
         current_findings = state.get("business_findings", [])
         state["business_findings"] = current_findings + findings
+        state["progress_updates"].append("Business Analysis phase finished.")
         
         return state

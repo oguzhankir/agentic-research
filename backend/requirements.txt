@@ -6,6 +6,8 @@ langchain-community
 langchain-openai
 langgraph
 langchain-openai
+beautifulsoup4
+requests
 pydantic
 pydantic-settings
 websockets

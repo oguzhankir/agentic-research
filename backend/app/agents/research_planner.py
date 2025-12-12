@@ -1,22 +1,10 @@
 from typing import List, Dict, Any
 from langchain_core.messages import SystemMessage, HumanMessage
-from pydantic import BaseModel, Field
 
 from app.agents.base import BaseAgent
 from app.core.state import ResearchState
 from app.core.config import logger
-
-class ResearchQuestion(BaseModel):
-    id: str = Field(description="Unique identifier for the question")
-    question: str = Field(description="The specific research question")
-    category: str = Field(description="Category: technical, business, market, news, etc.")
-    priority: int = Field(description="Priority score 1-5 (5 is highest)")
-    depth: str = Field(description="Expected depth: overview, deep-dive, fast-check")
-    assigned_agent: str = Field(description="Agent responsible: web_researcher, technical_analyst, or business_analyst")
-
-class ResearchPlan(BaseModel):
-    questions: List[ResearchQuestion] = Field(description="List of research questions")
-    estimated_time: str = Field(description="Estimated time to complete research")
+from app.models.research import ResearchPlan, ResearchQuestion
 
 class ResearchPlannerAgent(BaseAgent):
     async def invoke(self, state: ResearchState) -> ResearchState:
@@ -50,10 +38,14 @@ class ResearchPlannerAgent(BaseAgent):
         structured_llm = self.llm.with_structured_output(ResearchPlan)
         
         try:
+            state["progress_updates"].append("Research Planner: Analyzing topic complexity...")
+            
             plan: ResearchPlan = await structured_llm.ainvoke([
                 SystemMessage(content=system_prompt),
                 HumanMessage(content=f"Create a research plan for: {topic}")
             ])
+            
+            state["progress_updates"].append("Research Planner: Strategy defined.")
             
             # Convert Pydantic model to dict for state
             state["research_plan"] = plan.model_dump()

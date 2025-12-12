@@ -29,39 +29,29 @@ class ContentSynthesizerAgent(BaseAgent):
         combined_text = "\n\n".join(all_findings)
         
         # 2. Construct Prompt for Synthesis
-        topic = state.get("topic", "Unknown Topic")
-        customization = state.get("customization", {})
-        tone = customization.get("tone", "professional")
-        depth = customization.get("depth", "comprehensive")
+        state["progress_updates"].append("Content Synthesizer: Aggregating all research data...")
         
-        system_prompt = f"""You are an Expert Research Synthesizer. 
-        Your goal is to create a {depth} research report on the topic: "{topic}".
-        Tone: {tone}.
+        # Format findings for LLM
+        findings_text = ""
+        for f in all_findings:
+            findings_text += f"\n--- Finding ({f.get('type')}) ---\n"
+            findings_text += f"Question: {f.get('question')}\n"
+            findings_text += f"Content: {f.get('content') or f.get('raw_content')}\n"
+            findings_text += f"Source: {f.get('source')}\n"
+
+        system_prompt = "You are a Lead Editor. Synthesize the following research findings into a Comprehensive Markdown Report."
         
-        Use the provided research findings to answer the original research questions. 
-        Format the output in strict Markdown.
-        Include Executive Summary, Detailed Analysis, and Key Takeaways.
-        """
-        
-        human_prompt = f"""Here are the collected research findings:
-        
-        {combined_text}
-        
-        Please synthesize this into a structured report.
-        """
-        
-        # 3. Call LLM
         try:
             response = await self.llm.ainvoke([
                 SystemMessage(content=system_prompt),
-                HumanMessage(content=human_prompt)
+                HumanMessage(content=f"Write the report based on:\n\n{findings_text}")
             ])
             
-            report = response.content
-            state["synthesized_content"] = report
-            state["progress_updates"].append("Research content synthesized.")
+            state["synthesized_content"] = response.content
+            state["progress_updates"].append("Content Synthesizer: Final Report Drafted.")
             
         except Exception as e:
+
             logger.error(f"Error during content synthesis: {e}")
             state["errors"].append(f"Content Synthesis Error: {e}")
             

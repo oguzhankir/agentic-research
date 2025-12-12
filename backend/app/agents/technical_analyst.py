@@ -45,6 +45,7 @@ class TechnicalAnalystAgent(BaseAgent):
             logger.info(f"Technical Research: {search_query}")
             
             try:
+                state["progress_updates"].append(f"Technical Analyst: Deep diving into {question_text}...")
                 results = self.search_tool.invoke(search_query)
                 
                 # Use LLM to analyze the technical findings
@@ -71,7 +72,7 @@ class TechnicalAnalystAgent(BaseAgent):
                     "url": "https://github.com" # Fallback for UI visualization
                 })
                 
-                state["progress_updates"].append(f"Analyzed technical aspect: {question_text}")
+                state["progress_updates"].append(f"Technical Analysis complete for: {question_text}")
                 
             except Exception as e:
                 logger.error(f"Error in Technical Analyst for {question_text}: {e}")
@@ -79,5 +80,6 @@ class TechnicalAnalystAgent(BaseAgent):
 
         current_findings = state.get("technical_findings", [])
         state["technical_findings"] = current_findings + findings
+        state["progress_updates"].append("Technical Analysis phase finished.")
         
         return state

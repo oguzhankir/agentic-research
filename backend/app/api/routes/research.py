@@ -1,49 +1,20 @@
-from fastapi import FastAPI, BackgroundTasks, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from typing import Dict, Any, List
+import uuid
 
-from app.core.config import settings, logger
+from app.core.config import logger
 from app.core.state import ResearchState
 from app.core.graph import build_research_graph
+from app.core.store import RESEARCH_STORE
+from app.models.research import ResearchRequest, ResearchResponse
 
-app = FastAPI(
-    title="Agentic Research Studio API",
-    description="API for Agentic Research Studio",
-    version="0.1.0"
-)
-
-# Configure CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+router = APIRouter()
 
 # Initialize Graph
 research_graph = build_research_graph()
 
-class ResearchRequest(BaseModel):
-    topic: str
-    customization: Dict[str, Any] = {}
-
-class ResearchResponse(BaseModel):
-    research_id: str
-    status: str
-    message: str
-
-@app.get("/health")
-async def health_check():
-    return {"status": "ok", "version": "0.1.0"}
-
-# In-memory store for MVP
-RESEARCH_STORE = {}
-
-@app.post("/research", response_model=ResearchResponse)
+@router.post("", response_model=ResearchResponse)
 async def start_research(request: ResearchRequest, background_tasks: BackgroundTasks):
-    import uuid
     research_id = str(uuid.uuid4())
     
     # Initialize state
@@ -66,9 +37,6 @@ async def start_research(request: ResearchRequest, background_tasks: BackgroundT
     # Save to store
     RESEARCH_STORE[research_id] = initial_state
 
-    # For now, we'll run it synchronously for the MVP proof or use background tasks if asyncio
-    # Ideally, we should store the state in a DB or memory to retrieve later.
-    
     async def run_graph(state, r_id):
         logger.info(f"Running graph for {state['topic']}")
         try:
@@ -92,7 +60,7 @@ async def start_research(request: ResearchRequest, background_tasks: BackgroundT
         "message": "Research started in background"
     }
 
-@app.get("/research/{research_id}")
+@router.get("/{research_id}")
 async def get_research_status(research_id: str):
     state = RESEARCH_STORE.get(research_id)
     if not state:
@@ -100,4 +68,3 @@ async def get_research_status(research_id: str):
     
     # Return relevant parts or full state
     return state
-
